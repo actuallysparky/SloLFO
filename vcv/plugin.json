@@ -2,7 +2,7 @@
   "slug": "SlowLFOPrototype",
   "name": "Slow LFO Prototype",
   "version": "2.0.6",
-  "license": "proprietary",
+  "license": "GPL-3.0-or-later",
   "brand": "Slow LFO",
   "author": "Bearamin",
   "description": "8x8 matrix UX prototype for a long-period three-output Eurorack LFO",

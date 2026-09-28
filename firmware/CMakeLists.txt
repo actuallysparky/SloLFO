@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.13)
+include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
+project(slow_lfo C CXX ASM)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+pico_sdk_init()
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+add_executable(slow_lfo main.cpp)
+target_compile_definitions(slow_lfo PRIVATE PICO_FLASH_SIZE_BYTES=2097152)
+target_link_libraries(slow_lfo pico_stdlib hardware_pwm hardware_adc hardware_flash hardware_pio hardware_clocks pico_flash)
+pico_enable_stdio_usb(slow_lfo 0)
+pico_enable_stdio_uart(slow_lfo 0)
+option(SLOW_LFO_UF2 "Generate UF2 with picotool" OFF)
+if(SLOW_LFO_UF2)
+    pico_add_extra_outputs(slow_lfo)
+endif()
+add_custom_command(TARGET slow_lfo POST_BUILD
+    COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:slow_lfo> ${CMAKE_CURRENT_BINARY_DIR}/slow_lfo.bin
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/check_image.py ${CMAKE_CURRENT_BINARY_DIR}/slow_lfo.bin
+    VERBATIM)

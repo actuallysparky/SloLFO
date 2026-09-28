@@ -15,12 +15,13 @@ SloLFO is an 8 HP slow Eurorack LFO concept and a VCV Rack 2 plugin for explorin
 
 Minutes and Hours show period as a colored pie. Days and Months fill the grid from the upper left, one pixel per day or month; half-day settings half-light the next pixel. At idle, a colored triangle remains static while one bright pixel follows phase. Its upper-half shape indicates unipolar output; bipolar uses the display's full height. The three CV outputs remain active together. A simulated power cycle and charging animation are available in the plugin; see [VCV usage](vcv/README.md).
 
-The plugin is a user-experience prototype. Its ideal output waveforms and simulated reserve charging do not validate the electrical carrier or physical phase save. A fixed month is 30 days, so the longest setting is 1,920 days. The actual RP2350 firmware port is not included in this snapshot.
+The plugin is a user-experience prototype. A fixed month is 30 days, so the longest setting is 1,920 days. The included hardware firmware currently targets the earlier RP2040/5×5 module; the RP2350/8×8 port is still to come.
 
 ## Contents
 
 - [`vcv/`](vcv/) — Rack plugin C++ source, panel SVG, manifest, build files, and panel generator.
-- [`hardware/`](hardware/) — saved RP2350 carrier and 8×8 faceplate KiCad PCB files plus the custom footprints they use.
+- [`firmware/`](firmware/) — current RP2040/5×5 prototype firmware source and build instructions.
+- [`hardware/`](hardware/) — RP2350 carrier and 8×8 faceplate KiCad PCB files plus the custom footprints they use.
 - [`bom/`](bom/) — a current board-derived parts list and an older priced Rev B workbook, with revision notes.
 - [`docs/functional-spec.md`](docs/functional-spec.md) — proposed behavior and electrical architecture.
 - [`docs/2350-fork-notes.md`](docs/2350-fork-notes.md) — RP2350 pin mapping and open hardware issues.
@@ -35,8 +36,8 @@ make RACK_DIR=/absolute/path/to/Rack-SDK
 make dist RACK_DIR=/absolute/path/to/Rack-SDK
 ```
 
-The `.vcvplugin` package appears under `vcv/dist/`. The plugin manifest currently uses the `SlowLFOPrototype` slug and `Bearamin` author. Its license field remains `proprietary`; choose an explicit distribution license before a public release or VCV Library submission.
+The `.vcvplugin` package appears under `vcv/dist/`. The plugin manifest uses the `SlowLFOPrototype` slug and `Bearamin` author.
 
-## Hardware status
+## License and project status
 
-The included boards are design snapshots for review. The RP2350 carrier still has unresolved electrical and mechanical issues, and the faceplate artwork crosses its enlarged LED opening. Neither board has passed the fabrication and physical acceptance gates. Read [the hardware notes](hardware/README.md) before ordering or powering a board.
+SloLFO is licensed under [GPL-3.0-or-later](LICENSE), the license identifier used by [VCV Core](https://github.com/VCVRack/Rack/blob/v2/Core.json). This repository is private while the hardware path is fabricated and validated; updates to the plugin, firmware, and boards will be published here as the design evolves. The current firmware target and PCB target differ, as described in [firmware](firmware/README.md) and [hardware](hardware/README.md).

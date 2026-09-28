@@ -1,8 +1,14 @@
 .DS_Store
+/AGENTS.md
+/journal.md
 _local/
 vcv/build/
 vcv/dist/
 vcv/plugin.dylib
+firmware/build/
+firmware/*.bin
+firmware/*.elf
+firmware/*.uf2
 *.kicad_prl
 *.lck
 *-backups/

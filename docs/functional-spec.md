@@ -1,6 +1,6 @@
 # Slow LFO — Rev B functional specification
 
-Status: engineering prototype. The 8×8 RP2350 carrier and 22 × 22 mm faceplate opening are separate forks of the earlier RP2040 design; neither is a fabrication release. The 8×8 faceplate still has artwork crossing the opening, and the carrier needs electrical and mechanical resolution. See [RP2350 fork notes](2350-fork-notes.md). The UX contract below is now represented in VCV; the physical firmware still implements the earlier logarithmic interaction. Electrical, physical, and power-cut acceptance on a built unit remain open.
+Status: engineering prototype. The 8×8 RP2350 carrier and 22 × 22 mm faceplate opening are separate forks of the earlier RP2040 design. See [RP2350 fork notes](2350-fork-notes.md). The UX contract below is represented in VCV; the included physical firmware still targets the earlier RP2040/5×5 hardware and logarithmic interaction. Electrical, physical, and power-cut acceptance on a built RP2350 unit remain open.
 
 ## Product and interface
 
@@ -25,7 +25,7 @@ In Minutes and Hours, the **entire 8×8 matrix** is a circular pie whose illumin
 
 Holding the encoder for **500 ms** replaces the matrix view with the *current* output mode: all upper four rows blue in UNI; upper four rows blue and lower four rows red in BI. Releasing between 500 ms and 2 seconds cancels the preview without changing mode or edit unit. At **2 seconds of continuous hold**, switch **all three outputs together** to the other voltage mode immediately and update the held preview immediately. Continuing to hold causes no further switches; release returns to the usual display. Turning during a press cancels its hold action. Changing voltage mode preserves phase and period, so jack voltage may jump at the switch instant. SINE/TRIANGLE endpoints and SQUARE levels are 0/+5 V in UNI and −5/+5 V in BI. At boot or on return from power loss, a 64-pixel spiral shall show reserve-charge progress from the measured CAP+ voltage to the validated ready threshold; do not use a fixed timer to decide physical readiness. Limit normal matrix brightness and blank it immediately on power failure. During charging, freeze phase advancement and ignore edits as described below.
 
-The present firmware still uses a 60-second to 30-day logarithmic period, MIN/HR/DAY/MO selector, automatically alternating screens, and a moving charging dot rather than measured charge progress. It must be revised after the VCV interaction is accepted. The saved 8×8 faceplate fork retains the MIN/HOUR/DAY/MONTH legends, but its artwork overlaps the enlarged window and needs relocation before fabrication.
+The included RP2040 firmware still uses a 60-second to 30-day logarithmic period, MIN/HR/DAY/MO selector, automatically alternating screens, and a moving charging dot rather than measured charge progress. The RP2350 firmware port will follow the VCV interaction design as it is accepted.
 
 ## Circuit and pin assignment
 

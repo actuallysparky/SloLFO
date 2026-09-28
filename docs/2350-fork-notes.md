@@ -35,14 +35,9 @@ the pin names/order follow its [pinout image](https://www.waveshare.com/img/devk
 The Ø1.0 mm drill and Ø1.7 mm annulus are inherited header assumptions, not
 dimensions specified by Waveshare. Dry-fit a purchased module and chosen
 headers before fabrication. The separate `Slow-LFO-8HP-Faceplate_8x8.kicad_pcb`
-fork enlarges the LED aperture from 12 × 11 mm to 22 × 22 mm, centered over
-the 25 × 25 mm U1 module at faceplate drawing coordinate (67.37, 46.5475) mm.
-This leaves a nominal 1.5 mm module rim on all four sides. Per the owner's
-direction, **only the four Edge.Cuts segments defining the LED aperture changed**.
-All artwork, labels, rack holes, encoder, and output jack holes remain at their
-original positions for the owner to move. The current artwork crosses the new
-aperture: KiCad DRC reports 58 violations (26 copper-edge, 28 silk-edge, and
-the six inherited original-faceplate findings). The actual LED envelope,
-header stack, and panel-to-module spacing still need a physical dry-fit. Rear USB clearance,
-LED current budget, nearby carrier component fit, and all new U1 copper
-escapes are still to be resolved. Neither fork is a fabrication release.
+has a 22 × 22 mm LED opening centered over the 25 × 25 mm U1 module at
+faceplate drawing coordinate (67.37, 46.5475) mm. This leaves a nominal
+1.5 mm module rim on all four sides. The actual LED envelope, header stack,
+panel-to-module spacing, rear USB clearance, LED current budget, nearby carrier
+component fit, and all new U1 copper escapes remain subjects for the hardware
+layout and physical validation work.

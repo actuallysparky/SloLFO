@@ -1,6 +1,6 @@
 # Slow LFO for VCV Rack 2
 
-This 8HP virtual module previews the proposed 8×8 RGB user experience. It generates ideal phase-aligned sine, triangle, and square outputs in either 0–5 V or −5–5 V. Its panel SVG is generated from the saved `Slow-LFO-8HP-Faceplate_8x8.kicad_pcb` fork's front silk and copper artwork. That faceplate still has artwork overlapping the enlarged window and is not ready to fabricate. VCV does not model the physical board's PWM filters or prove its power-loss save circuit.
+This 8HP virtual module previews the proposed 8×8 RGB user experience. It generates ideal phase-aligned sine, triangle, and square outputs in either 0–5 V or −5–5 V. Its panel SVG is generated from the `Slow-LFO-8HP-Faceplate_8x8.kicad_pcb` front silk and copper artwork. VCV models the controls and timing; the hardware firmware and circuit are developed separately.
 
 ## Use
 

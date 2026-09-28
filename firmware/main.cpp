@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
@@ -16,34 +17,50 @@
 // Electrical contract: the board's divider ratio is 1:2 on both ADC inputs.
 // These thresholds are prototype defaults; scope the rails and recalibrate.
 namespace {
-constexpr uint PWM_SINE = 2, PWM_TRI = 3, PWM_SQUARE = 4;
-constexpr uint ENC_A = 5, ENC_B = 6, ENC_PUSH = 7;
-constexpr uint BUCK_ADC = 26, CAP_ADC = 27, LED_PIN = 29;
+constexpr uint PWM_SINE = 10, PWM_TRI = 11, PWM_SQUARE = 12;
+constexpr uint ENC_A = 13, ENC_B = 14, ENC_PUSH = 15;
+constexpr uint BUCK_ADC = 26, CAP_ADC = 27, LED_PIN = 25;
 constexpr uint32_t PWM_TOP = 4095;
-constexpr uint64_t PERIOD_MIN_US = 60ULL * 1000000ULL;
-constexpr uint64_t PERIOD_MAX_US = 2592000ULL * 1000000ULL;
-constexpr uint32_t FLASH_BYTES = 2U * 1024U * 1024U;
+constexpr uint64_t SECOND_US = 1000000ULL;
+constexpr uint64_t DAY_US = 86400ULL * SECOND_US;
+constexpr uint64_t MONTH_US = 30ULL * DAY_US;
+constexpr uint64_t PERIOD_MIN_US = 60ULL * SECOND_US;
+constexpr uint64_t PERIOD_MAX_US = 64ULL * MONTH_US;
+constexpr uint64_t MINIMUM_US[4] = {PERIOD_MIN_US, 3600ULL * SECOND_US, DAY_US, MONTH_US};
+constexpr uint64_t MAXIMUM_US[4] = {3600ULL * SECOND_US, DAY_US, 64ULL * DAY_US, PERIOD_MAX_US};
+constexpr uint64_t STEP_US[4] = {60ULL * SECOND_US, 3600ULL * SECOND_US, DAY_US / 2, MONTH_US};
+constexpr uint32_t FLASH_BYTES = 16U * 1024U * 1024U;
 constexpr uint32_t JOURNAL_BYTES = 64U * 1024U;
 constexpr uint32_t JOURNAL_OFFSET = FLASH_BYTES - JOURNAL_BYTES;
 constexpr uint32_t PAGE_BYTES = 256, SECTOR_BYTES = 4096;
 constexpr uint32_t PAGE_COUNT = JOURNAL_BYTES / PAGE_BYTES;
-constexpr uint32_t MAGIC = 0x534C4642; // SLFB
-constexpr uint32_t FORMAT = 1;
+constexpr uint32_t MAGIC = 0x534C4632; // SLF2; incompatible with the older RP2040 journal.
+constexpr uint32_t FORMAT = 2;
 constexpr uint32_t BUCK_FAIL_MV = 4400;
 constexpr uint32_t BUCK_RECOVER_MV = 4750;
 constexpr uint32_t CAP_READY_MV = 4550;
 constexpr uint32_t CAP_READY_HYST_MV = 4450;
 constexpr uint64_t HOUR_US = 3600ULL * 1000000ULL;
 constexpr double TAU = 6.283185307179586;
-constexpr uint64_t RANGE_US[4] = {PERIOD_MIN_US, 3600ULL*1000000ULL,
-    86400ULL*1000000ULL, PERIOD_MAX_US};
+constexpr int MATRIX_SIDE = 8, MATRIX_CELLS = 64;
+constexpr int TRIANGLE_PATH_BI[] = {32,24,17,9,2,11,19,28,36,45,53,62,55,47,39};
+constexpr int TRIANGLE_PATH_UNI[] = {16,8,9,1,2,3,11,12,20,21,29,30,31,23};
+
+struct Color { uint8_t r, g, b; };
+constexpr Color UNIT_COLOR[4] = {
+    {4, 19, 25},   // minutes: cyan
+    {6, 25, 11},   // hours: green
+    {25, 16, 3},   // days: amber
+    {23, 7, 25},   // months: violet
+};
 
 struct __attribute__((packed)) Record {
     uint32_t magic, format, seq;
     uint64_t period_us;
     uint32_t phase_q32;
     uint8_t bipolar;
-    uint8_t reserved[227];
+    uint8_t selected_unit;
+    uint8_t reserved[226];
     uint32_t crc;
 };
 static_assert(sizeof(Record) == PAGE_BYTES);
@@ -56,6 +73,10 @@ bool reserve_ready = false;
 bool flash_error = false;
 bool fallback_used = false;
 bool power_failed = false;
+uint8_t selected_unit = 0;
+uint8_t display_view = 0; // 0 waveform, 1 selector, 2 period
+uint64_t view_deadline_us = 0;
+bool mode_hold_preview = false;
 uint32_t journal_seq = 0;
 int newest_page = -1;
 uint64_t next_checkpoint_us = 0;
@@ -89,7 +110,7 @@ bool erased(uint32_t page) {
 }
 bool valid(const Record &r) {
     return r.magic==MAGIC && r.format==FORMAT && r.period_us>=PERIOD_MIN_US &&
-        r.period_us<=PERIOD_MAX_US && r.bipolar<=1 &&
+        r.period_us<=PERIOD_MAX_US && r.bipolar<=1 && r.selected_unit<4 &&
         crc32(reinterpret_cast<const uint8_t*>(&r),PAGE_BYTES-4)==r.crc;
 }
 void scan_journal() {
@@ -102,6 +123,7 @@ void scan_journal() {
         if (newest_page<0 || static_cast<int32_t>(r.seq-journal_seq)>0) {
             newest_page=static_cast<int>(p); journal_seq=r.seq;
             period_us=r.period_us; base_phase=r.phase_q32; bipolar=r.bipolar!=0;
+            selected_unit=r.selected_unit;
         }
     }
     if (newest_page<0 && nonempty) fallback_used=true;
@@ -109,8 +131,7 @@ void scan_journal() {
 }
 
 uint32_t phase_at(uint64_t now) {
-    // Double has enough precision for every integer microsecond of a 30-day
-    // period. Modulo bounds the quotient and avoids tiny cumulative additions.
+    // Modulo bounds the quotient for periods as long as 64 fixed months.
     uint64_t remainder=(now-anchor_us)%period_us;
     uint32_t advance=static_cast<uint32_t>((double)remainder*4294967296.0/(double)period_us);
     return base_phase+advance;
@@ -152,6 +173,7 @@ bool append_record(uint64_t now, bool emergency) {
     std::memset(&r,0xff,sizeof(r));
     r.magic=MAGIC; r.format=FORMAT; r.seq=journal_seq+1;
     r.period_us=period_us; r.phase_q32=phase_at(now); r.bipolar=bipolar?1:0;
+    r.selected_unit=selected_unit;
     r.crc=crc32(reinterpret_cast<const uint8_t*>(&r),PAGE_BYTES-4);
     std::pair<uint32_t,const uint8_t*> args{JOURNAL_OFFSET+next*PAGE_BYTES,
         reinterpret_cast<const uint8_t*>(&r)};
@@ -205,75 +227,150 @@ void init_leds() {
     pio_gpio_init(led_pio,LED_PIN); pio_sm_set_consecutive_pindirs(led_pio,led_sm,LED_PIN,1,true);
     pio_sm_init(led_pio,led_sm,offset,&c); pio_sm_set_enabled(led_pio,led_sm,true);
 }
-void pixels(const uint32_t frame[25]) {
-    for (int i=0;i<25;++i) pio_sm_put_blocking(led_pio,led_sm,frame[i]<<8u);
+using Frame = std::array<Color, MATRIX_CELLS>;
+
+Color dim(Color c, double level) {
+    level=std::clamp(level,0.0,1.0);
+    return {static_cast<uint8_t>(std::lround(c.r*level)),
+            static_cast<uint8_t>(std::lround(c.g*level)),
+            static_cast<uint8_t>(std::lround(c.b*level))};
+}
+
+std::array<int, MATRIX_CELLS> charge_spiral() {
+    std::array<int, MATRIX_CELLS> path{};
+    int left=0,right=7,top=0,bottom=7,index=0;
+    while (left<=right && top<=bottom) {
+        for (int x=left;x<=right;++x) path[index++]=top*8+x;
+        ++top;
+        for (int y=top;y<=bottom;++y) path[index++]=y*8+right;
+        --right;
+        if (top<=bottom) {
+            for (int x=right;x>=left;--x) path[index++]=bottom*8+x;
+            --bottom;
+        }
+        if (left<=right) {
+            for (int y=bottom;y>=top;--y) path[index++]=y*8+left;
+            ++left;
+        }
+    }
+    return path;
+}
+
+std::array<int, MATRIX_CELLS> pie_order() {
+    std::array<int, MATRIX_CELLS> order{};
+    for (int i=0;i<MATRIX_CELLS;++i) order[i]=i;
+    auto angle=[](int i) {
+        double a=std::atan2(static_cast<double>(i%8)-3.5,3.5-static_cast<double>(i/8));
+        return a<0 ? a+TAU : a;
+    };
+    std::sort(order.begin(),order.end(),[&](int a,int b) {
+        const double aa=angle(a),bb=angle(b);
+        if (aa!=bb) return aa<bb;
+        return std::hypot(a%8-3.5,a/8-3.5)<std::hypot(b%8-3.5,b/8-3.5);
+    });
+    return order;
+}
+
+uint32_t grb(Color c) {return (uint32_t(c.g)<<16)|(uint32_t(c.r)<<8)|c.b;}
+void pixels(const Frame &frame) {
+    // The matrix chain is routed in alternating rows. Keep logical art row-major.
+    for (int i=0;i<MATRIX_CELLS;++i) {
+        const int y=i/8, x=(y&1) ? 7-i%8 : i%8;
+        pio_sm_put_blocking(led_pio,led_sm,grb(frame[y*8+x])<<8u);
+    }
     sleep_us(80);
 }
-void blank() {uint32_t frame[25]{}; pixels(frame);}
-void render(uint64_t now, bool charging) {
-    uint32_t frame[25]{};
-    uint32_t color=charging ? 0x000004 : (flash_error||fallback_used ? 0x040000 :
-        bipolar ? 0x000400 : 0x040400); // GRB order
-    if (charging) {
-        frame[(now/200000)%25]=color;
-    } else if ((now/4000000)%2==0) {
-        // One of three phase-aligned waveform previews, changing each second.
-        int wave=(now/1000000)%3;
-        for (int x=0;x<5;++x) {
-            double p=(double)x/4.0;
-            double v=wave==0 ? 0.5+0.5*std::sin(TAU*p) :
-                wave==1 ? (p<0.5 ? 2*p : 2-2*p) : (p<0.5 ? 1.0 : 0.0);
-            int y=4-std::clamp((int)std::lround(4*v),0,4);
-            frame[5*y+x]=color;
+void blank() {pixels(Frame{});}
+
+void render(uint64_t now, uint32_t cap_mv) {
+    Frame frame{};
+    const Color color=UNIT_COLOR[selected_unit];
+    if (!reserve_ready) {
+        static const auto spiral=charge_spiral();
+        const double filled=std::clamp(static_cast<double>(cap_mv)/CAP_READY_MV,0.0,1.0)*64.0;
+        const int complete=std::min(63,static_cast<int>(filled));
+        for (int i=0;i<complete;++i) frame[spiral[i]]={2,8,14};
+        frame[spiral[complete]]={23,27,28};
+    } else if (mode_hold_preview) {
+        for (int y=0;y<8;++y) for (int x=0;x<8;++x) {
+            if (y<4) frame[y*8+x]={2,8,25};
+            else if (bipolar) frame[y*8+x]={25,2,2};
         }
-        frame[(phase_at(now)>>29)%5]=0x040404; // phase marker on top row
+    } else if (display_view==1) {
+        for (int u=0;u<4;++u) {
+            int bx=(u&1)*4,by=(u/2)*4;
+            for (int y=0;y<4;++y) for (int x=0;x<4;++x)
+                frame[(by+y)*8+bx+x]=dim(UNIT_COLOR[u],u==selected_unit?1.0:0.10);
+        }
+    } else if (display_view==2 && selected_unit>=2) {
+        const double filled=static_cast<double>(period_us)/(selected_unit==2?DAY_US:MONTH_US);
+        for (int i=0;i<64;++i) frame[i]=dim(color,filled-i);
+    } else if (display_view==2) {
+        static const auto order=pie_order();
+        const double filled=std::min(1.0,static_cast<double>(period_us)/MAXIMUM_US[selected_unit])*64.0;
+        for (int i=0;i<64;++i) frame[order[i]]=dim(color,filled-i);
     } else {
-        // Top row marks minute, hour, day, or month scale. Remaining rows
-        // show logarithmic progress within the selected scale.
-        int range=period_us<3600ULL*1000000ULL ? 0 :
-            period_us<86400ULL*1000000ULL ? 1 :
-            period_us<604800ULL*1000000ULL ? 2 : 3;
-        frame[range]=color;
-        double lower=(double)(range==3 ? 604800ULL*1000000ULL : RANGE_US[range]);
-        double upper=(double)(range==0 ? RANGE_US[1] :
-            range==1 ? RANGE_US[2] : range==2 ? 604800ULL*1000000ULL : PERIOD_MAX_US);
-        int n=std::clamp(1+(int)std::lround(19*std::log((double)period_us/lower)/std::log(upper/lower)),1,20);
-        for (int i=0;i<n;++i) frame[5+i]=color;
+        const int *path=bipolar?TRIANGLE_PATH_BI:TRIANGLE_PATH_UNI;
+        const int count=bipolar?15:14;
+        for (int i=0;i<count;++i) frame[path[i]]=dim(color,0.48);
+        const int marker=std::min(count-1,static_cast<int>(static_cast<double>(phase_at(now))/4294967296.0*count));
+        frame[path[marker]]={28,28,28};
     }
+    if (flash_error || fallback_used) frame[63]={28,0,0};
     pixels(frame);
 }
 
 struct Encoder {
-    uint8_t prev=3; int accum=0; bool pressed=false; uint64_t change_us=0, press_us=0;
-    bool long_done=false; bool range_mode=false; int range=0;
+    uint8_t prev=3;
+    int accum=0;
+    bool raw_press=false, pressed=false, press_eligible=false;
+    bool turned_during_press=false, mode_switched=false;
+    uint64_t raw_change_us=0, press_us=0;
+
     void tick(uint64_t now) {
         uint8_t ab=(gpio_get(ENC_A)<<1)|gpio_get(ENC_B);
         static constexpr int8_t transitions[16]={0,-1,1,0, 1,0,0,-1, -1,0,0,1, 0,1,-1,0};
         accum+=transitions[(prev<<2)|ab]; prev=ab;
         if (accum>=4 || accum<=-4) {
             int dir=accum>0?1:-1; accum=0;
+            if (pressed) {turned_during_press=true; mode_hold_preview=false;}
             if (reserve_ready && !power_failed) turn(dir,now);
         }
         bool raw=!gpio_get(ENC_PUSH);
-        if (raw!=pressed && now-change_us>=30000) {
-            pressed=raw; change_us=now;
-            if (pressed) {press_us=now; long_done=false;}
-            else if (!long_done && reserve_ready && !power_failed) range_mode=!range_mode;
+        if (raw!=raw_press) {raw_press=raw; raw_change_us=now;}
+        if (raw_press!=pressed && now-raw_change_us>=30000) {
+            pressed=raw_press;
+            if (pressed) {
+                press_us=now; press_eligible=reserve_ready && !power_failed;
+                turned_during_press=false; mode_switched=false;
+            } else {
+                mode_hold_preview=false;
+                if (press_eligible && !turned_during_press && !power_failed &&
+                    now-press_us<500000) {
+                    selected_unit=(selected_unit+1)%4;
+                    display_view=1; view_deadline_us=now+2000000;
+                }
+            }
         }
-        if (pressed && !long_done && now-press_us>=800000) {
-            long_done=true;
-            if (reserve_ready && !power_failed) bipolar=!bipolar;
+        if (pressed && press_eligible && !turned_during_press && reserve_ready && !power_failed) {
+            const uint64_t held=now-press_us;
+            mode_hold_preview=held>=500000;
+            if (held>=2000000 && !mode_switched) {
+                bipolar=!bipolar; mode_switched=true;
+            }
         }
     }
     void turn(int dir,uint64_t now) {
-        if (range_mode) {
-            range=std::clamp(range+dir,0,3);
-            reanchor(now); period_us=RANGE_US[range];
-        } else {
-            reanchor(now);
-            double value=(double)period_us*std::exp((double)dir*std::log((double)PERIOD_MAX_US/(double)PERIOD_MIN_US)/192.0);
-            period_us=(uint64_t)std::clamp(value,(double)PERIOD_MIN_US,(double)PERIOD_MAX_US);
+        const int u=selected_unit;
+        reanchor(now);
+        if (period_us<MINIMUM_US[u]) period_us=MINIMUM_US[u];
+        else if (period_us>MAXIMUM_US[u]) period_us=MAXIMUM_US[u];
+        else {
+            int64_t next=static_cast<int64_t>(period_us)+dir*static_cast<int64_t>(STEP_US[u]);
+            period_us=static_cast<uint64_t>(std::clamp(next,static_cast<int64_t>(MINIMUM_US[u]),
+                                                      static_cast<int64_t>(MAXIMUM_US[u])));
         }
+        display_view=2; view_deadline_us=now+2000000;
     }
 };
 } // namespace
@@ -301,6 +398,7 @@ int main() {
             if (!reserve_ready && cap_mv>=CAP_READY_MV && buck_mv>=BUCK_RECOVER_MV) {
                 reserve_ready=true; anchor_us=now;
                 if (newest_page<0) (void)append_record(now,false);
+                next_checkpoint_us=now+HOUR_US;
             }
             if (reserve_ready && cap_mv<CAP_READY_HYST_MV) {
                 reanchor(now);
@@ -318,7 +416,8 @@ int main() {
             outputs(reserve_ready?phase_at(now):base_phase);
         }
         encoder.tick(now);
-        if (now>=next_display) {next_display=now+100000; render(now,!reserve_ready);}
+        if (display_view!=0 && now>=view_deadline_us) display_view=0;
+        if (now>=next_display) {next_display=now+100000; render(now,cap_mv);}
         if (reserve_ready && now>=next_checkpoint_us) {
             (void)append_record(now,false); next_checkpoint_us=now+HOUR_US;
         }

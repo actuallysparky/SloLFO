@@ -4,4 +4,4 @@
 
 The boards are the current design files in this private development repository. The carrier has open electrical and fit work; fabrication and validation are the next hardware milestones. See [RP2350 fork notes](../docs/2350-fork-notes.md) and the [functional specification](../docs/functional-spec.md) for the pin map and circuit design.
 
-Open either PCB in KiCad to inspect or continue the layout. The firmware in `../firmware/` still targets the earlier RP2040/5×5 board.
+Open either PCB in KiCad to inspect or continue the layout. The matching RP2350 firmware source is in `../firmware/`.

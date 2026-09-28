@@ -23,10 +23,9 @@ and DOUT are intentionally absent, since this is the header-mount variant.
 | `ENC_SW` | `GP15` | 16 |
 
 Other edge pins are left unconnected. `GP25` controls the onboard WS2812
-matrix and needs no carrier net. Firmware for this fork must use GPIO 10–12
+matrix and needs no carrier net. The RP2350 firmware uses GPIO 10–12
 for waveform PWM, GPIO 13–15 for the encoder, GPIO 26–27 for power sensing,
-and GPIO 25 for the LEDs. The existing RP2040 firmware/pin map will not work
-unchanged. `VSYS` is the carrier's existing net name; the new module pin is
+and GPIO 25 for the LEDs. `VSYS` is the carrier's existing net name; the module pin is
 marked `5V` by Waveshare.
 
 The outline and 2.54 mm edge-hole pitch follow Waveshare's [25 × 25 mm

@@ -1,0 +1,17 @@
+{
+  "slug": "SlowLFOPrototype",
+  "name": "Slow LFO Prototype",
+  "version": "2.0.6",
+  "license": "proprietary",
+  "brand": "Slow LFO",
+  "author": "Bearamin",
+  "description": "8x8 matrix UX prototype for a long-period three-output Eurorack LFO",
+  "modules": [
+    {
+      "slug": "SlowLFO",
+      "name": "Slow LFO",
+      "description": "Phase-aligned sine, triangle, and square CV with an encoder and 8x8 color matrix",
+      "tags": ["Low-frequency oscillator"]
+    }
+  ]
+}

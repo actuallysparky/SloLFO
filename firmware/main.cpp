@@ -328,6 +328,10 @@ struct Encoder {
     uint64_t raw_change_us=0, press_us=0;
 
     void tick(uint64_t now) {
+        if (!reserve_ready || power_failed) {
+            press_eligible=false;
+            mode_hold_preview=false;
+        }
         uint8_t ab=(gpio_get(ENC_A)<<1)|gpio_get(ENC_B);
         static constexpr int8_t transitions[16]={0,-1,1,0, 1,0,0,-1, -1,0,0,1, 0,1,-1,0};
         accum+=transitions[(prev<<2)|ab]; prev=ab;

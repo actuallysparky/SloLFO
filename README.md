@@ -1,6 +1,6 @@
 # SloLFO
 
-SloLFO is an 8 HP slow Eurorack LFO concept and a VCV Rack 2 plugin for exploring its controls. Three phase-aligned outputs provide sine, triangle, and square CV. The plugin uses one push encoder and an 8×8 color matrix modeled on the Waveshare RP2350-Matrix hardware fork.
+SloLFO is an 8 HP slow Eurorack LFO module and a VCV Rack 2 plugin. The VCV plugin is availalbe prior to the eurorack module and is being used as an exploring ground for the user interface. Three phase-aligned outputs provide sine, triangle, and square CV. The module uses one push encoder and an 8×8 color matrix modeled on the Waveshare RP2350-Matrix hardware fork.
 
 **Author for the VCV plugin: Bearamin.** Inspired by Patience, with thanks to the wonders of slow time.
 
@@ -13,7 +13,7 @@ SloLFO is an 8 HP slow Eurorack LFO concept and a VCV Rack 2 plugin for explorin
 | Hold for 0.5 seconds | Preview the present voltage mode: four blue upper rows for 0–5 V, or blue upper and red lower rows for −5–5 V. |
 | Continue holding to 2 seconds | Switch all three outputs immediately and update the preview; a longer hold does not switch again. |
 
-Minutes and Hours show period as a colored pie. Days and Months fill the grid from the upper left, one pixel per day or month; half-day settings half-light the next pixel. At idle, a colored triangle remains static while one bright pixel follows phase. Its upper-half shape indicates unipolar output; bipolar uses the display's full height. The three CV outputs remain active together. A simulated power cycle and charging animation are available in the plugin; see [VCV usage](vcv/README.md).
+Minutes and Hours show period as a colored pie. Days and Months fill the grid from the upper left, one pixel per day or month; half-day settings half-light the next pixel. At idle, a colored triangle remains static while one bright pixel follows phase. Its upper-half shape indicates unipolar output; bipolar uses the display's full height. The three CV outputs remain active together.
 
 The plugin is a user-experience prototype. A fixed month is 30 days, so the longest setting is 1,920 days. The included firmware now targets the RP2350/8×8 module and follows the same front-panel controls and displays. Physical behavior remains to be checked on an assembled module.
 
@@ -40,4 +40,4 @@ The `.vcvplugin` package appears under `vcv/dist/`. The plugin manifest uses the
 
 ## License and project status
 
-SloLFO is licensed under [GPL-3.0-or-later](LICENSE), the license identifier used by [VCV Core](https://github.com/VCVRack/Rack/blob/v2/Core.json). This repository is private while the hardware path is fabricated and validated; updates to the plugin, firmware, and boards will be published here as the design evolves. See the [firmware build and pin map](firmware/README.md) and [hardware files](hardware/README.md).
+SloLFO is licensed under [GPL-3.0-or-later](LICENSE), the license identifier used by [VCV Core](https://github.com/VCVRack/Rack/blob/v2/Core.json). TUpdates to the plugin, firmware, and boards will be published here as the design evolves. See the [firmware build and pin map](firmware/README.md) and [hardware files](hardware/README.md).

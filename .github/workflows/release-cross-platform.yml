@@ -32,9 +32,10 @@ jobs:
           make -C vcv dist RACK_DIR="$PWD/_local/sdk/Rack-SDK"
           package="vcv/dist/SlowLFOPrototype-2.0.6-lin-x64.vcvplugin"
           test -f "$package"
-          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.so'
-          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/LICENSE'
-          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.json'
+          zstd -dc "$package" | tar -tf - > vcv/dist/package-contents.txt
+          grep -Fxq 'SlowLFOPrototype/plugin.so' vcv/dist/package-contents.txt
+          grep -Fxq 'SlowLFOPrototype/LICENSE' vcv/dist/package-contents.txt
+          grep -Fxq 'SlowLFOPrototype/plugin.json' vcv/dist/package-contents.txt
           (cd vcv/dist && sha256sum "$(basename "$package")" > SHA256SUMS-lin-x64)
           printf 'Source commit: %s\nRack SDK: %s\nPlatform: Linux x64\nCompiler: %s\n' "$SOURCE_COMMIT" "$RACK_SDK_VERSION" "$(g++ --version | head -n 1)" > vcv/dist/BUILDINFO-lin-x64.txt
       - name: Attach Linux build to private release
@@ -69,9 +70,10 @@ jobs:
           make -C vcv dist RACK_DIR="$PWD/_local/sdk/Rack-SDK"
           package="vcv/dist/SlowLFOPrototype-2.0.6-win-x64.vcvplugin"
           test -f "$package"
-          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.dll'
-          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/LICENSE'
-          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.json'
+          zstd -dc "$package" | tar -tf - > vcv/dist/package-contents.txt
+          grep -Fxq 'SlowLFOPrototype/plugin.dll' vcv/dist/package-contents.txt
+          grep -Fxq 'SlowLFOPrototype/LICENSE' vcv/dist/package-contents.txt
+          grep -Fxq 'SlowLFOPrototype/plugin.json' vcv/dist/package-contents.txt
           (cd vcv/dist && sha256sum "$(basename "$package")" > SHA256SUMS-win-x64)
           printf 'Source commit: %s\nRack SDK: %s\nPlatform: Windows x64\nCompiler: %s\n' "$SOURCE_COMMIT" "$RACK_SDK_VERSION" "$(g++ --version | head -n 1)" > vcv/dist/BUILDINFO-win-x64.txt
       - name: Attach Windows build to private release

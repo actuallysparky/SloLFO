@@ -16,7 +16,7 @@ The physical hardware's present sine/triangle RC filters support a provisional *
 
 ## Build and install
 
-Install a Rack 2 plugin SDK and pass its `Rack-SDK` directory as `RACK_DIR`. The SDK is a build dependency, not project source. `make` regenerates `res/SlowLFO.svg` from the included 8×8 KiCad faceplate when that board changes; this requires Python 3 and `kicad-cli`. Set `KICAD_CLI` to its executable if it is not on `PATH`.
+Install a Rack 2 plugin SDK and pass its `Rack-SDK` directory as `RACK_DIR`. The SDK is a build dependency, not project source. The checked-in `res/SlowLFO.svg` is packaged directly, so a plugin build does not require KiCad. When the faceplate changes, run `make -C vcv panel` from the repository root and commit the regenerated SVG; that explicit step requires Python 3 and `kicad-cli`. Set `KICAD_CLI` to its executable if it is not on `PATH`.
 
 ```sh
 cd vcv
@@ -25,3 +25,5 @@ make dist RACK_DIR=/absolute/path/to/Rack-SDK
 ```
 
 `dist/` contains a `.vcvplugin` package. Rack loads installed plugins at startup; restart Rack after installation. The module appears as **Slow LFO Prototype → Slow LFO**.
+
+For a release build from committed source, run `RACK_DIR=/absolute/path/to/Rack-SDK ./vcv/build_release.sh` from the repository root. The script places the package and SHA-256 checksum under `_local/releases/<version>/` and checks that the package contains the manifest, artwork, and license. The current release target uses Rack SDK 2.6.6 on macOS ARM64; other architectures require their corresponding Rack SDK and a build on that platform or the official Rack plugin toolchain.

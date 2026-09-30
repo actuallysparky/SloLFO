@@ -36,7 +36,15 @@ make RACK_DIR=/absolute/path/to/Rack-SDK
 make dist RACK_DIR=/absolute/path/to/Rack-SDK
 ```
 
-The `.vcvplugin` package appears under `vcv/dist/`. The plugin manifest uses the `SlowLFOPrototype` slug and `Bearamin` author.
+The `.vcvplugin` package appears under `vcv/dist/`. The plugin manifest uses the `SlowLFOPrototype` slug and `Bearamin` author. The checked-in panel SVG is packaged as-is; run `make -C vcv panel` when the KiCad faceplate changes.
+
+For a release package built from the current committed source, run:
+
+```sh
+RACK_DIR=/absolute/path/to/Rack-SDK ./vcv/build_release.sh
+```
+
+This uses `git archive HEAD` in a temporary directory, builds with the supplied Rack 2 SDK, and writes the plugin archive plus a SHA-256 checksum to `_local/releases/v2.0.6/`. Use a Rack 2.6.6 SDK for the current release. The script requires a clean tracked tree so the resulting package can be tied to a commit. The `.vcvplugin` contains `plugin.json`, the panel artwork, and the GPL license; the separate RP2350 firmware is not part of the Rack package.
 
 ## License and project status
 

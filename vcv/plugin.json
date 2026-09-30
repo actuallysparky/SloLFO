@@ -6,6 +6,8 @@
   "brand": "Slow LFO",
   "author": "Bearamin",
   "description": "8x8 matrix UX prototype for a long-period three-output Eurorack LFO",
+  "manualUrl": "https://github.com/actuallysparky/SloLFO/blob/main/README.md",
+  "sourceUrl": "https://github.com/actuallysparky/SloLFO",
   "modules": [
     {
       "slug": "SlowLFO",

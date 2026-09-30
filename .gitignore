@@ -5,6 +5,7 @@ _local/
 vcv/build/
 vcv/dist/
 vcv/plugin.dylib
+/vcv/LICENSE
 firmware/build/
 firmware/*.bin
 firmware/*.elf

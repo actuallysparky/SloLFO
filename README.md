@@ -46,6 +46,8 @@ RACK_DIR=/absolute/path/to/Rack-SDK ./vcv/build_release.sh
 
 This uses `git archive HEAD` in a temporary directory, builds with the supplied Rack 2 SDK, and writes the plugin archive plus a SHA-256 checksum to `_local/releases/v2.0.6/`. Use a Rack 2.6.6 SDK for the current release. The script requires a clean tracked tree so the resulting package can be tied to a commit. The `.vcvplugin` contains `plugin.json`, the panel artwork, and the GPL license; the separate RP2350 firmware is not part of the Rack package.
 
+On macOS systems whose default Command Line Tools SDK reports an `arm64e.x1` linker error, set `SDKROOT` to a compatible Xcode SDK. This release was built with `SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk`. The script also writes `BUILDINFO.txt` with the source commit, SDK, compiler, and platform used.
+
 ## License and project status
 
 SloLFO is licensed under [GPL-3.0-or-later](LICENSE), the license identifier used by [VCV Core](https://github.com/VCVRack/Rack/blob/v2/Core.json). TUpdates to the plugin, firmware, and boards will be published here as the design evolves. See the [firmware build and pin map](firmware/README.md) and [hardware files](hardware/README.md).

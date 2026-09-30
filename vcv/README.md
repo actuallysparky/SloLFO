@@ -27,3 +27,4 @@ make dist RACK_DIR=/absolute/path/to/Rack-SDK
 `dist/` contains a `.vcvplugin` package. Rack loads installed plugins at startup; restart Rack after installation. The module appears as **Slow LFO Prototype → Slow LFO**.
 
 For a release build from committed source, run `RACK_DIR=/absolute/path/to/Rack-SDK ./vcv/build_release.sh` from the repository root. The script places the package and SHA-256 checksum under `_local/releases/<version>/` and checks that the package contains the manifest, artwork, and license. The current release target uses Rack SDK 2.6.6 on macOS ARM64; other architectures require their corresponding Rack SDK and a build on that platform or the official Rack plugin toolchain.
+The script also writes `BUILDINFO.txt`. If the host's default macOS SDK cannot link the plugin, set `SDKROOT` to a compatible Xcode SDK before invoking the script.

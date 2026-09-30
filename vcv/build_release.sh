@@ -4,10 +4,15 @@ set -euo pipefail
 repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 sdk_dir="${RACK_DIR:?Set RACK_DIR to an extracted Rack 2 SDK directory}"
 
-for command_name in git jq make zstd tar shasum; do
+for command_name in git jq make zstd tar shasum grep; do
     command -v "$command_name" >/dev/null || { printf 'Missing %s\n' "$command_name" >&2; exit 1; }
 done
 [[ -f "$sdk_dir/plugin.mk" ]] || { printf 'Rack SDK not found: %s\n' "$sdk_dir" >&2; exit 1; }
+sdk_version="${RACK_SDK_VERSION:-2.6.6}"
+grep -Fq "<h3>$sdk_version " "$sdk_dir/CHANGELOG.html" || {
+    printf 'Expected Rack SDK %s at %s\n' "$sdk_version" "$sdk_dir" >&2
+    exit 1
+}
 
 cd "$repo_dir"
 git diff --quiet HEAD -- || { printf 'Commit tracked changes before making a release build.\n' >&2; exit 1; }
@@ -32,4 +37,12 @@ for required in "$slug/plugin.json" "$slug/LICENSE" "$slug/res/SlowLFO.svg"; do
 done
 cp "$package" "$output_dir/"
 (cd "$output_dir" && shasum -a 256 "$(basename "$package")" > SHA256SUMS)
+{
+    printf 'Source commit: %s\n' "$commit"
+    printf 'Plugin version: %s\n' "$version"
+    printf 'Rack SDK version: %s\n' "$sdk_version"
+    printf 'Platform: %s\n' "$(uname -sm)"
+    printf 'Compiler: %s\n' "$(c++ --version | head -n 1)"
+    printf 'SDKROOT: %s\n' "${SDKROOT:-system default}"
+} > "$output_dir/BUILDINFO.txt"
 printf 'Source commit: %s\nOutput: %s\n' "$commit" "$output_dir"

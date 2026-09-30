@@ -1,0 +1,81 @@
+name: Build Windows and Linux VCV plugins
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  RELEASE_TAG: v2.0.6
+  SOURCE_COMMIT: 6cc5898fe31efa8e18fcaf1e55d26c9c6b5b34a9
+  RACK_SDK_VERSION: 2.6.6
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: v2.0.6
+      - name: Install build tools
+        run: sudo apt-get update && sudo apt-get install -y g++ make jq zstd unzip curl
+      - name: Build and check Linux package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          mkdir -p _local/sdk
+          curl --fail --location --retry 3 "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-lin-x64.zip" -o _local/sdk.zip
+          unzip -q _local/sdk.zip -d _local/sdk
+          test -f _local/sdk/Rack-SDK/plugin.mk
+          make -C vcv dist RACK_DIR="$PWD/_local/sdk/Rack-SDK"
+          package="vcv/dist/SlowLFOPrototype-2.0.6-lin-x64.vcvplugin"
+          test -f "$package"
+          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.so'
+          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/LICENSE'
+          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.json'
+          (cd vcv/dist && sha256sum "$(basename "$package")" > SHA256SUMS-lin-x64)
+          printf 'Source commit: %s\nRack SDK: %s\nPlatform: Linux x64\nCompiler: %s\n' "$SOURCE_COMMIT" "$RACK_SDK_VERSION" "$(g++ --version | head -n 1)" > vcv/dist/BUILDINFO-lin-x64.txt
+      - name: Attach Linux build to private release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" vcv/dist/SlowLFOPrototype-2.0.6-lin-x64.vcvplugin vcv/dist/SHA256SUMS-lin-x64 vcv/dist/BUILDINFO-lin-x64.txt --repo "$GITHUB_REPOSITORY" --clobber
+
+  windows:
+    runs-on: windows-2022
+    steps:
+      - name: Keep LF endings
+        shell: pwsh
+        run: git config --global core.autocrlf input
+      - uses: actions/checkout@v4
+        with:
+          ref: v2.0.6
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc git make jq zstd unzip curl
+      - name: Build and check Windows package
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_COMMIT"
+          mkdir -p _local/sdk
+          curl --fail --location --retry 3 "https://vcvrack.com/downloads/Rack-SDK-${RACK_SDK_VERSION}-win-x64.zip" -o _local/sdk.zip
+          unzip -q _local/sdk.zip -d _local/sdk
+          test -f _local/sdk/Rack-SDK/plugin.mk
+          make -C vcv dist RACK_DIR="$PWD/_local/sdk/Rack-SDK"
+          package="vcv/dist/SlowLFOPrototype-2.0.6-win-x64.vcvplugin"
+          test -f "$package"
+          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.dll'
+          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/LICENSE'
+          zstd -dc "$package" | tar -tf - | grep -Fqx 'SlowLFOPrototype/plugin.json'
+          (cd vcv/dist && sha256sum "$(basename "$package")" > SHA256SUMS-win-x64)
+          printf 'Source commit: %s\nRack SDK: %s\nPlatform: Windows x64\nCompiler: %s\n' "$SOURCE_COMMIT" "$RACK_SDK_VERSION" "$(g++ --version | head -n 1)" > vcv/dist/BUILDINFO-win-x64.txt
+      - name: Attach Windows build to private release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload $env:RELEASE_TAG vcv/dist/SlowLFOPrototype-2.0.6-win-x64.vcvplugin vcv/dist/SHA256SUMS-win-x64 vcv/dist/BUILDINFO-win-x64.txt --repo $env:GITHUB_REPOSITORY --clobber

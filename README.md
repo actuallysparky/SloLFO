@@ -46,6 +46,8 @@ RACK_DIR=/absolute/path/to/Rack-SDK ./vcv/build_release.sh
 
 This uses `git archive HEAD` in a temporary directory, builds with the supplied Rack 2 SDK, and writes the plugin archive plus a SHA-256 checksum to `_local/releases/v2.0.6/`. Use a Rack 2.6.6 SDK for the current release. The script requires a clean tracked tree so the resulting package can be tied to a commit. The `.vcvplugin` contains `plugin.json`, the panel artwork, and the GPL license; the separate RP2350 firmware is not part of the Rack package.
 
+The manually triggered [cross-platform release workflow](.github/workflows/release-cross-platform.yml) builds Windows x64 and Linux x64 packages from the fixed `v2.0.6` tag with their matching Rack 2.6.6 SDKs, checks package contents, and attaches packages, checksums, and build details to the private GitHub release. The macOS ARM64 package is built with the local release script above.
+
 On macOS systems whose default Command Line Tools SDK reports an `arm64e.x1` linker error, set `SDKROOT` to a compatible Xcode SDK. This release was built with `SDKROOT=/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.5.sdk`. The script also writes `BUILDINFO.txt` with the source commit, SDK, compiler, and platform used.
 
 ## License and project status
